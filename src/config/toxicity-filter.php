@@ -34,9 +34,9 @@ return [
         ],
         'thresholds' => [
             'ar' => [
-                'block' => env('TOXICITY_ARABIC_BLOCK_THRESHOLD', 0.8),
-                'flag' => env('TOXICITY_ARABIC_FLAG_THRESHOLD', 0.6),
-                'warn' => env('TOXICITY_ARABIC_WARN_THRESHOLD', 0.4),
+                'block' => env('TOXICITY_ARABIC_BLOCK_THRESHOLD', 0.1),
+                'flag' => env('TOXICITY_ARABIC_FLAG_THRESHOLD', 0.05),
+                'warn' => env('TOXICITY_ARABIC_WARN_THRESHOLD', 0.02),
             ],
             'en' => [
                 'block' => env('TOXICITY_ENGLISH_BLOCK_THRESHOLD', 0.8),
