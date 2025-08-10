@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2024-12-19
+
+### Fixed
+- **Database Storage**: Fixed issue where toxicity detection results were not being saved to database despite `store_content` being enabled
+- **Content Persistence**: Added proper database storage functionality with comprehensive metadata
+- **Action Tracking**: Now properly records what action was taken (`block`, `flag`, `warn`, `none`) based on thresholds
+- **Request Context**: Captures IP address, user agent, request path, and method for better tracking
+
+### Added
+- **Database Integration**: New `saveToDatabase()` method in ToxicityFilterService
+- **Metadata Storage**: Stores language detection, thresholds used, and action taken
+- **Error Handling**: Graceful fallback if ToxicityDetection model doesn't exist
+- **User Tracking**: Links detections to authenticated users when available
+
+### Technical Details
+- **Model Integration**: Automatically detects and uses `App\Models\ToxicityDetection` model
+- **Content Hash**: Generates MD5 hash for content deduplication
+- **Language Context**: Stores detected language and language-specific thresholds
+- **Request Context**: Captures full request information for audit trails
+
 ## [1.1.0] - 2024-12-19
 
 ### Added
