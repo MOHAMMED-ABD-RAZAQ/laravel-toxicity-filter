@@ -20,7 +20,7 @@ A professional Laravel library that integrates AI-based toxicity detection engin
 - 🔒 **Privacy First**: Content hashing for privacy protection
 - 📈 **Performance Optimized**: Built-in rate limiting and content optimization
 - 🛠️ **Developer Friendly**: Rich testing utilities and comprehensive error handling
-- 🌐 **Multi-language Support**: Works with content in multiple languages
+- 🌐 **Multi-language Support**: Native support for Arabic and English content with automatic language detection
 
 ## Requirements
 
@@ -89,6 +89,14 @@ TOXICITY_BLOCK_THRESHOLD=0.8
 TOXICITY_FLAG_THRESHOLD=0.6
 TOXICITY_WARN_THRESHOLD=0.4
 
+# Language-Specific Thresholds
+TOXICITY_ARABIC_BLOCK_THRESHOLD=0.8
+TOXICITY_ARABIC_FLAG_THRESHOLD=0.6
+TOXICITY_ARABIC_WARN_THRESHOLD=0.4
+TOXICITY_ENGLISH_BLOCK_THRESHOLD=0.8
+TOXICITY_ENGLISH_FLAG_THRESHOLD=0.6
+TOXICITY_ENGLISH_WARN_THRESHOLD=0.4
+
 # Caching
 TOXICITY_CACHE_ENABLED=true
 TOXICITY_CACHE_TTL=3600
@@ -105,14 +113,20 @@ TOXICITY_STORE_CONTENT=false
 ```php
 use Packages\ToxicityFilter\Facades\ToxicityFilter;
 
-// Analyze content
+// Analyze English content
 $result = ToxicityFilter::analyze("This is some content to check");
 
 echo $result->getToxicityScore(); // 0.85
 echo $result->getProvider(); // 'openai'
 var_dump($result->getCategories()); // ['harassment', 'hate']
 
-// Quick checks
+// Analyze Arabic content (automatic language detection)
+$arabicResult = ToxicityFilter::analyze("مرحبا بالعالم");
+
+// Analyze multilingual content
+$multilingualResult = ToxicityFilter::analyze("Hello مرحبا world");
+
+// Quick checks (uses language-specific thresholds)
 if (ToxicityFilter::shouldBlock($content)) {
     // Block the content
 }
@@ -206,6 +220,77 @@ class ContentModerationService
         return $response;
     }
 }
+```
+
+### Arabic Language Support
+
+The package includes native support for Arabic content with automatic language detection and text normalization:
+
+#### Automatic Language Detection
+
+```php
+// Arabic content is automatically detected
+$arabicContent = "مرحبا بالعالم";
+$result = ToxicityFilter::analyze($arabicContent);
+// Language is automatically detected as 'ar'
+
+// Multilingual content is supported
+$mixedContent = "Hello مرحبا world";
+$result = ToxicityFilter::analyze($mixedContent);
+// Primary language is determined based on character count
+```
+
+#### Arabic Text Normalization
+
+The package automatically normalizes Arabic text for better analysis:
+
+- **Character Normalization**: Converts different forms of Arabic characters (أ, إ, آ → ا)
+- **Diacritics Removal**: Removes tashkeel (diacritics) for better matching
+- **Hamza Handling**: Normalizes hamza variations
+
+```php
+// Raw Arabic text with diacritics
+$rawArabic = "مَرْحَباً بِالعَالَمِ";
+
+// Package automatically normalizes for analysis
+$result = ToxicityFilter::analyze($rawArabic);
+```
+
+#### Language-Specific Thresholds
+
+Configure different toxicity thresholds for Arabic and English content:
+
+```php
+// In config/toxicity-filter.php
+'languages' => [
+    'thresholds' => [
+        'ar' => [
+            'block' => 0.8,  // Arabic blocking threshold
+            'flag' => 0.6,   // Arabic flagging threshold
+            'warn' => 0.4,   // Arabic warning threshold
+        ],
+        'en' => [
+            'block' => 0.8,  // English blocking threshold
+            'flag' => 0.6,   // English flagging threshold
+            'warn' => 0.4,   // English warning threshold
+        ],
+    ],
+],
+```
+
+#### Manual Language Detection
+
+You can also use the language detection service directly:
+
+```php
+use Packages\ToxicityFilter\Services\LanguageDetectionService;
+
+$detector = new LanguageDetectionService();
+
+$language = $detector->detectLanguage("مرحبا بالعالم"); // 'ar'
+$isArabic = $detector->isArabic("مرحبا"); // true
+$isMultilingual = $detector->isMultilingual("Hello مرحبا"); // true
+$normalized = $detector->normalizeArabicText("مَرْحَباً"); // "مرحبا"
 ```
 
 ### Queue Processing
@@ -366,6 +451,16 @@ Enable debug logging in your configuration:
 - **Audit Trail**: Comprehensive logging for compliance and debugging
 
 ## Changelog
+
+### Version 1.1.0
+
+**Arabic Language Support**
+- ✅ Native Arabic language detection and support
+- ✅ Automatic Arabic text normalization (character and diacritics)
+- ✅ Language-specific toxicity thresholds
+- ✅ Multilingual content support
+- ✅ Arabic language detection service
+- ✅ Enhanced provider support for Arabic content
 
 ### Version 1.0.0
 

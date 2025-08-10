@@ -26,11 +26,15 @@ class PerspectiveProvider implements ToxicityProviderInterface
     {
         $this->validateContent($content);
 
+        // Use normalized content if available (for Arabic)
+        $contentToAnalyze = $options['normalized_content'] ?? $content;
+        $language = $options['language'] ?? 'en';
+
         try {
             $requestData = [
-                'comment' => ['text' => $content],
+                'comment' => ['text' => $contentToAnalyze],
                 'requestedAttributes' => [],
-                'languages' => ['en'],
+                'languages' => [$language],
             ];
 
             // Add requested attributes

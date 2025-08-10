@@ -16,11 +16,13 @@ class ToxicityFilterService implements ToxicityFilterInterface
     private array $providers = [];
     private string $defaultProvider;
     private array $config;
+    private LanguageDetectionService $languageDetector;
 
     public function __construct(array $config)
     {
         $this->config = $config;
         $this->defaultProvider = $config['default'] ?? 'openai';
+        $this->languageDetector = new LanguageDetectionService();
         $this->initializeProviders();
     }
 
@@ -28,10 +30,20 @@ class ToxicityFilterService implements ToxicityFilterInterface
     {
         $provider = $provider ?: $this->defaultProvider;
         
+        // Detect language and add to options
+        $detectedLanguage = $this->languageDetector->detectLanguage($content);
+        $options['language'] = $detectedLanguage;
+        
+        // Normalize Arabic text if needed
+        if ($detectedLanguage === 'ar') {
+            $normalizedContent = $this->languageDetector->normalizeArabicText($content);
+            $options['normalized_content'] = $normalizedContent;
+        }
+        
         // Check cache first
         if ($this->config['cache']['enabled'] ?? false) {
             try {
-                $cacheKey = $this->getCacheKey($content, $provider);
+                $cacheKey = $this->getCacheKey($content, $provider, $detectedLanguage);
                 $cacheStore = $this->config['cache']['store'] ?? null;
                 
                 // Use default cache if store is not specified or doesn't exist
@@ -53,6 +65,7 @@ class ToxicityFilterService implements ToxicityFilterInterface
         // Store in cache
         if ($this->config['cache']['enabled'] ?? false) {
             try {
+                $cacheKey = $this->getCacheKey($content, $provider, $detectedLanguage);
                 $cacheStore = $this->config['cache']['store'] ?? null;
                 $cache = $cacheStore ? Cache::store($cacheStore) : Cache::store();
                 $cache->put($cacheKey, serialize($result), $this->config['cache']['ttl'] ?? 3600);
@@ -73,7 +86,8 @@ class ToxicityFilterService implements ToxicityFilterInterface
     public function shouldBlock(string $content, ?string $provider = null): bool
     {
         $result = $this->analyze($content, $provider);
-        $threshold = $this->config['thresholds']['block'] ?? 0.8;
+        $language = $this->languageDetector->detectLanguage($content);
+        $threshold = $this->getLanguageThreshold($language, 'block');
         
         return $result->shouldBlock($threshold);
     }
@@ -81,7 +95,8 @@ class ToxicityFilterService implements ToxicityFilterInterface
     public function shouldFlag(string $content, ?string $provider = null): bool
     {
         $result = $this->analyze($content, $provider);
-        $threshold = $this->config['thresholds']['flag'] ?? 0.6;
+        $language = $this->languageDetector->detectLanguage($content);
+        $threshold = $this->getLanguageThreshold($language, 'flag');
         
         return $result->shouldFlag($threshold);
     }
@@ -89,7 +104,8 @@ class ToxicityFilterService implements ToxicityFilterInterface
     public function shouldWarn(string $content, ?string $provider = null): bool
     {
         $result = $this->analyze($content, $provider);
-        $threshold = $this->config['thresholds']['warn'] ?? 0.4;
+        $language = $this->languageDetector->detectLanguage($content);
+        $threshold = $this->getLanguageThreshold($language, 'warn');
         
         return $result->shouldWarn($threshold);
     }
@@ -139,10 +155,28 @@ class ToxicityFilterService implements ToxicityFilterInterface
         };
     }
 
-    private function getCacheKey(string $content, string $provider): string
+    private function getCacheKey(string $content, string $provider, string $language = 'en'): string
     {
         $prefix = $this->config['cache']['prefix'] ?? 'toxicity_filter:';
-        return $prefix . $provider . ':' . md5($content);
+        return $prefix . $provider . ':' . $language . ':' . md5($content);
+    }
+
+    private function getLanguageThreshold(string $language, string $action): float
+    {
+        // Get language-specific threshold
+        $languageThreshold = $this->config['languages']['thresholds'][$language][$action] ?? null;
+        
+        if ($languageThreshold !== null) {
+            return $languageThreshold;
+        }
+        
+        // Fallback to default thresholds
+        return $this->config['thresholds'][$action] ?? match($action) {
+            'block' => 0.8,
+            'flag' => 0.6,
+            'warn' => 0.4,
+            default => 0.5,
+        };
     }
 
     private function logResult(string $content, ToxicityResult $result): void

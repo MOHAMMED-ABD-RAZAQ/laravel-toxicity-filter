@@ -17,6 +17,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Language Support
+    |--------------------------------------------------------------------------
+    |
+    | Configure language detection and support for multilingual content.
+    | The package automatically detects Arabic and English content.
+    |
+    */
+    'languages' => [
+        'supported' => ['en', 'ar'],
+        'default' => 'en',
+        'detection' => [
+            'enabled' => true,
+            'normalize_arabic' => true,
+            'remove_diacritics' => true,
+        ],
+        'thresholds' => [
+            'ar' => [
+                'block' => env('TOXICITY_ARABIC_BLOCK_THRESHOLD', 0.8),
+                'flag' => env('TOXICITY_ARABIC_FLAG_THRESHOLD', 0.6),
+                'warn' => env('TOXICITY_ARABIC_WARN_THRESHOLD', 0.4),
+            ],
+            'en' => [
+                'block' => env('TOXICITY_ENGLISH_BLOCK_THRESHOLD', 0.8),
+                'flag' => env('TOXICITY_ENGLISH_FLAG_THRESHOLD', 0.6),
+                'warn' => env('TOXICITY_ENGLISH_WARN_THRESHOLD', 0.4),
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | AI Providers Configuration
     |--------------------------------------------------------------------------
     |

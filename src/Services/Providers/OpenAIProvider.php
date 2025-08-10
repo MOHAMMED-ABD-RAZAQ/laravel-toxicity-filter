@@ -26,16 +26,27 @@ class OpenAIProvider implements ToxicityProviderInterface
     {
         $this->validateContent($content);
 
+        // Use normalized content if available (for Arabic)
+        $contentToAnalyze = $options['normalized_content'] ?? $content;
+        $language = $options['language'] ?? 'en';
+
         try {
+            $requestData = [
+                'input' => $contentToAnalyze,
+                'model' => $this->config['model'],
+            ];
+
+            // Add language-specific instructions for better Arabic detection
+            if ($language === 'ar') {
+                $requestData['input'] = "Analyze this Arabic text for toxicity: " . $contentToAnalyze;
+            }
+
             $response = $this->client->post($this->config['endpoint'], [
                 'headers' => [
                     'Authorization' => 'Bearer ' . $this->config['api_key'],
                     'Content-Type' => 'application/json',
                 ],
-                'json' => [
-                    'input' => $content,
-                    'model' => $this->config['model'],
-                ],
+                'json' => $requestData,
             ]);
 
             $data = json_decode($response->getBody()->getContents(), true);
