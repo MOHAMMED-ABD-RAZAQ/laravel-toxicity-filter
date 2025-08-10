@@ -195,5 +195,68 @@ class ToxicityFilterService implements ToxicityFilterInterface
         }
 
         Log::log($logLevel, 'Toxicity detection result', $logData);
+
+        // Save to database if logging is enabled
+        if ($this->config['logging']['enabled'] ?? false) {
+            $this->saveToDatabase($content, $result);
+        }
+    }
+
+    private function saveToDatabase(string $content, ToxicityResult $result): void
+    {
+        try {
+            // Check if ToxicityDetection model exists
+            if (!class_exists('App\\Models\\ToxicityDetection')) {
+                Log::warning('ToxicityDetection model not found, skipping database save');
+                return;
+            }
+
+            $storeContent = $this->config['logging']['store_content'] ?? false;
+            
+            // Determine action taken based on thresholds
+            $language = $this->languageDetector->detectLanguage($content);
+            $blockThreshold = $this->getLanguageThreshold($language, 'block');
+            $flagThreshold = $this->getLanguageThreshold($language, 'flag');
+            $warnThreshold = $this->getLanguageThreshold($language, 'warn');
+            
+            $actionTaken = 'none';
+            if ($result->shouldBlock($blockThreshold)) {
+                $actionTaken = 'block';
+            } elseif ($result->shouldFlag($flagThreshold)) {
+                $actionTaken = 'flag';
+            } elseif ($result->shouldWarn($warnThreshold)) {
+                $actionTaken = 'warn';
+            }
+
+            $detectionData = [
+                'provider' => $result->getProvider(),
+                'toxicity_score' => $result->getToxicityScore(),
+                'categories' => $result->getCategories(),
+                'content_hash' => md5($content),
+                'content' => $storeContent ? $content : null,
+                'metadata' => [
+                    'language' => $language,
+                    'thresholds' => [
+                        'block' => $blockThreshold,
+                        'flag' => $flagThreshold,
+                        'warn' => $warnThreshold,
+                    ],
+                ],
+                'action_taken' => $actionTaken,
+                'user_id' => auth()->id(),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'request_path' => request()->path(),
+                'request_method' => request()->method(),
+            ];
+
+            \App\Models\ToxicityDetection::create($detectionData);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to save toxicity detection to database', [
+                'error' => $e->getMessage(),
+                'content' => substr($content, 0, 100) . '...',
+            ]);
+        }
     }
 }
