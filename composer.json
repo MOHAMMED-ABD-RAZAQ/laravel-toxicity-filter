@@ -1,7 +1,7 @@
 {
   "name": "mohammed-abd-razaq/laravel-toxicity-filter",
   "description": "A lightweight Laravel library that wraps AI-based toxicity detection engines to evaluate and moderate user-generated content within your application.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "library",
   "license": "MIT",
   "keywords": [
